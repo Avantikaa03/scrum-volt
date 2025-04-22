@@ -7,5 +7,9 @@
   },
   "author": "",
   "license": "MIT",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-formidable": "^1.2.0"
+  }
 }
