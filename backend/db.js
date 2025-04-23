@@ -1,5 +1,5 @@
 const mongoose = require("mongoose")
-mongoose.connect("mongodb://localhost:27017/ACXIOM_LMS")
+mongoose.connect("mongodb://localhost:27017/SCRUM_DB")
 
 mongoose.connection.on("connected", ()=> {
     console.log('Database successfully connected...');
