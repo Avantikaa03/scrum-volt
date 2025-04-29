@@ -22,9 +22,8 @@ router.post("/create", auth, async (req, res) => {
     }
 
     var member_ids = [];
-    
+
     // Only run this block if 'members' is provided and is a non-empty array
-    console.log(Array.isArray(members) && members.length > 0)
     if (Array.isArray(members) && members.length > 0) {
       for (const uname of members) {
         const mem = await UserModel.findOne({ username: uname });
@@ -32,7 +31,6 @@ router.post("/create", auth, async (req, res) => {
           member_ids.push(mem._id);
         }
       }
-      console.log(member_ids)
     }
 
     const project = new ProjectsModel({
@@ -44,6 +42,27 @@ router.post("/create", auth, async (req, res) => {
 
     await project.save();
     res.json({ text: "Project created successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/delete", auth, async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    // Check if any field is empty
+    if (!project_id) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) {
+      return res.status(400).send({ error: "Can't find the project!" });
+    }
+
+    await ProjectsModel.deleteOne({ _id: project_id });
+
+    res.json({ text: "Project deleted successfully!" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
