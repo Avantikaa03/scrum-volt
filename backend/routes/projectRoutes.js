@@ -68,4 +68,49 @@ router.delete("/delete", auth, async (req, res) => {
   }
 });
 
+
+router.get("/info", auth, async (req, res) => {
+  try {
+    const owner = await UserModel.findById(req.user_id);
+    if (!owner) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    const { project_id } = req.body;
+
+    // Check if any field is empty
+    if (!project_id) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) {
+      return res.status(400).send({ error: "Can't find the project!" });
+    }
+
+    var member_usernames = [];
+
+    // Only run this block if 'members' is provided and is a non-empty array
+    // Find usernames of members from their ids
+    if (Array.isArray(project.members) && project.members.length > 0) {
+      for (const id of project.members) {
+        const mem = await UserModel.findById(id);
+        if (mem) {
+          member_usernames.push(mem.username);
+        }
+      }
+    }
+
+    const output = {
+      title: project.title,
+      description: project.description,
+      members: member_usernames,
+      owner: owner.username
+    }
+
+    res.json(output);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
