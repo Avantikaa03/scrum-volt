@@ -39,6 +39,9 @@ const JWT_KEY = "the_definition_of_insanity";
 const authRoutes = require('./routes/authRoutes');
 app.use("/user-auth", authRoutes);
 
+const projectRoutes = require('./routes/projectRoutes');
+app.use("/project", projectRoutes);
+
 
 
 // Home Routes
