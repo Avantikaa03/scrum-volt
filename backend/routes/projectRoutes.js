@@ -9,8 +9,8 @@ const auth = require("../middlewares/auth");
 
 router.post("/create", auth, async (req, res) => {
   try {
-    const owner = await UserModel.findById(req.user_id);
-    if (!owner) {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
       return res.status(400).send({ error: "Can't find the user!" });
     }
 
@@ -36,7 +36,7 @@ router.post("/create", auth, async (req, res) => {
     const project = new ProjectsModel({
       title: title,
       description: description,
-      owner: owner._id,
+      owner: logged_in_user._id,
       members: member_ids,
     });
 
@@ -68,11 +68,10 @@ router.delete("/delete", auth, async (req, res) => {
   }
 });
 
-
 router.get("/info", auth, async (req, res) => {
   try {
-    const owner = await UserModel.findById(req.user_id);
-    if (!owner) {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
       return res.status(400).send({ error: "Can't find the user!" });
     }
 
@@ -104,13 +103,73 @@ router.get("/info", auth, async (req, res) => {
       title: project.title,
       description: project.description,
       members: member_usernames,
-      owner: owner.username
-    }
+      owner: logged_in_user.username,
+    };
 
     res.json(output);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.get("/get-owned-by-user", auth, async (req, res) => {
+  try {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    const projects = await ProjectsModel.find({ owner: logged_in_user._id });
+    if (!projects) {
+      return res.status(400).send({ error: "Can't find the project!" });
+    }
+
+    var projects_info = [];
+
+    // Only run this block if 'members' is provided and is a non-empty array
+    // Find usernames of members from their ids
+    if (Array.isArray(projects) && projects.length > 0) {
+      for (const pro of projects) {
+        projects_info.push({
+          title: pro.title,
+          id: pro._id,
+        });
+      }
+    }
+
+    const output = {
+      projects: projects_info,
+    };
+
+    res.json(output);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/get-joined-by-user", auth, async (req, res) => {
+  try {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    // Find all projects where user is in the members array
+    const projects = await ProjectsModel.find({ members: logged_in_user._id });
+    if (!projects || projects.length === 0) {
+      return res.status(404).send({ error: "No joined projects found!" });
+    }
+
+    const projects_info = projects.map((pro) => ({
+      title: pro.title,
+      id: pro._id,
+    }));
+
+    res.json({ projects: projects_info });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 module.exports = router;
