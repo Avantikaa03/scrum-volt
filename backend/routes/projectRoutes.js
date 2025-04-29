@@ -7,6 +7,14 @@ const auth = require("../middlewares/auth");
 
 /* Note: Following routes are prefixed with `/project/` */
 
+
+/**
+ * @route   POST /project/create
+ * @desc    Creates a new project with given title, description, and optional members
+ * @access  Private (Requires authentication)
+ * @body    { title: String, description: String, members?: [String] (usernames) }
+ * @returns { message: String } or error
+ */
 router.post("/create", auth, async (req, res) => {
   try {
     const logged_in_user = await UserModel.findById(req.user_id);
@@ -47,6 +55,13 @@ router.post("/create", auth, async (req, res) => {
   }
 });
 
+/**
+ * @route   DELETE /project/delete
+ * @desc    Deletes a project by ID
+ * @access  Private (Only owner can delete)
+ * @body    { project_id: String }
+ * @returns { message: String } or error
+ */
 router.delete("/delete", auth, async (req, res) => {
   try {
     const { project_id } = req.body;
@@ -68,6 +83,13 @@ router.delete("/delete", auth, async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /project/info
+ * @desc    Returns detailed info about a project including members and owner
+ * @access  Private
+ * @body    { project_id: String }
+ * @returns { title, description, members: [usernames], owner: username } or error
+ */
 router.get("/info", auth, async (req, res) => {
   try {
     const logged_in_user = await UserModel.findById(req.user_id);
@@ -112,6 +134,12 @@ router.get("/info", auth, async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /project/get-owned-by-user
+ * @desc    Fetches all projects created/owned by the logged-in user
+ * @access  Private
+ * @returns { projects: [{ title, id }] } or error
+ */
 router.get("/get-owned-by-user", auth, async (req, res) => {
   try {
     const logged_in_user = await UserModel.findById(req.user_id);
@@ -147,6 +175,12 @@ router.get("/get-owned-by-user", auth, async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /project/get-joined-by-user
+ * @desc    Fetches all projects where the user is a member (but not necessarily the owner)
+ * @access  Private
+ * @returns { projects: [{ title, id }] } or error
+ */
 router.get("/get-joined-by-user", auth, async (req, res) => {
   try {
     const logged_in_user = await UserModel.findById(req.user_id);
@@ -171,5 +205,126 @@ router.get("/get-joined-by-user", auth, async (req, res) => {
   }
 });
 
+/**
+ * @route   PUT /project/update
+ * @desc    Updates the title and description of a project (owner-only)
+ * @access  Private
+ * @body    { project_id: String, new_title: String, new_description: String }
+ * @returns { message: String } or error
+ */
+router.put("/update", auth, async (req, res) => {
+  try {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    const { project_id, new_title, new_description } = req.body;
+    // Check for empty fields
+    if (!project_id || !new_title || !new_description) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) {
+      return res.status(400).send({ error: "Can't find the project!" });
+    }
+
+    
+    const project_owner = await UserModel.findById(project.owner);
+    if (!project_owner) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    if (project_owner.username === logged_in_user.username) {
+      project.title = new_title
+      project.description = new_description
+
+      await project.save();
+
+      res.json({ text: "Project updated successfully!" });
+    } else {
+      return res.status(400).send({ error: "Project not owned by the user!!" });
+    }
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @route   POST /project/add-members
+ * @desc    Adds users to a project by their usernames (owner-only)
+ * @access  Private
+ * @body    { project_id: String, usernames: [String] }
+ * @returns { message: String } or error
+ */
+router.post("/add-members", auth, async (req, res) => {
+  try {
+    const { project_id, usernames } = req.body;
+    
+    // Check for empty fields
+    if (!project_id || !Array.isArray(usernames) || usernames.length === 0) {
+      return res.status(400).json({ error: "Project ID and usernames are required." });
+    }
+
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) return res.status(404).json({ error: "Project not found." });
+
+    if (String(project.owner) !== req.user_id) {
+      return res.status(403).json({ error: "Only the project owner can add members." });
+    }
+
+    const users = await UserModel.find({ username: { $in: usernames } });
+
+    const newMemberIds = users
+      .map((u) => u._id)
+      .filter((id) => !project.members.includes(id)); // avoid duplicates
+
+    project.members.push(...newMemberIds);
+    await project.save();
+
+    res.json({ message: "Members added successfully." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * @route   POST /project/remove-members
+ * @desc    Removes users from a project by their usernames (owner-only)
+ * @access  Private
+ * @body    { project_id: String, usernames: [String] }
+ * @returns { message: String } or error
+ */
+router.post("/remove-members", auth, async (req, res) => {
+  try {
+    const { project_id, usernames } = req.body;
+
+    if (!project_id || !Array.isArray(usernames) || usernames.length === 0) {
+      return res.status(400).json({ error: "Project ID and usernames are required." });
+    }
+
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) return res.status(404).json({ error: "Project not found." });
+
+    if (String(project.owner) !== req.user_id) {
+      return res.status(403).json({ error: "Only the project owner can remove members." });
+    }
+
+    const users = await UserModel.find({ username: { $in: usernames } });
+    const removeIds = users.map((u) => u._id.toString());
+
+    project.members = project.members.filter(
+      (memberId) => !removeIds.includes(memberId.toString())
+    );
+
+    await project.save();
+
+    res.json({ message: "Members removed successfully." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
