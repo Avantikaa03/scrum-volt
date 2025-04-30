@@ -59,6 +59,26 @@ router.post("/create", auth, async (req, res) => {
   }
 });
 
+router.delete("/delete", auth, async (req, res) => {
+  try {
+    const { ticket_id } = req.body;
+
+    // Check if any field is empty
+    if (!ticket_id) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+    const ticket = await TicketModel.findById(ticket_id);
+    if (!ticket) {
+      return res.status(400).send({ error: "Can't find the ticket!" });
+    }
+
+    await TicketModel.deleteOne({ _id: ticket_id });
+
+    res.json({ text: "ticket deleted successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 module.exports = router;
