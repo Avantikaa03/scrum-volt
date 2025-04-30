@@ -1,0 +1,64 @@
+const express = require("express");
+const router = express.Router();
+
+const UserModel = require("../models/userModel");
+const auth = require("../middlewares/auth");
+const TicketModel = require("../models/ticketModel");
+
+/* Note: Following routes are prefixed with `/ticket/` */
+
+
+router.post("/create", auth, async (req, res) => {
+  try {
+    // user logg in
+    // input
+    // input validation & transformation
+    // create ticket (add input to table)
+
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    const { title, description, assignees, deadline } = req.body;
+
+    // Check for empty fields
+    if (!title || !description) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+
+    // Only run this block if 'assignees' is provided and is a non-empty array
+    
+    // Converts assignees' usernames into their ids
+    var assignees_ids = [];
+    // Only run this block if 'assignee' is provided and is a non-empty array
+    if (Array.isArray(assignees) && assignees.length > 0) {
+      for (const uname of assignees) {
+        const assig = await UserModel.findOne({ username: uname });
+        if (assig) {
+          assignees_ids.push(assig._id);
+        }
+      }
+    }
+
+
+    const ticket = new TicketModel({
+      title: title,
+      description: description, 
+      assignees: assignees_ids, 
+      creator: logged_in_user.id,
+      status: "pending",
+      deadline: new Date(deadline),
+    });
+    await ticket.save();
+
+
+    res.json({ text: "Ticket created successfully!" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+module.exports = router;

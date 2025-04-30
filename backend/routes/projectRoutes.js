@@ -7,7 +7,6 @@ const auth = require("../middlewares/auth");
 
 /* Note: Following routes are prefixed with `/project/` */
 
-
 /**
  * @route   POST /project/create
  * @desc    Creates a new project with given title, description, and optional members
@@ -29,8 +28,8 @@ router.post("/create", auth, async (req, res) => {
       return res.status(400).json({ error: "Please enter all the fields -_-" });
     }
 
+    // Converts members' usernames into their ids
     var member_ids = [];
-
     // Only run this block if 'members' is provided and is a non-empty array
     if (Array.isArray(members) && members.length > 0) {
       for (const uname of members) {
@@ -230,15 +229,14 @@ router.put("/update", auth, async (req, res) => {
       return res.status(400).send({ error: "Can't find the project!" });
     }
 
-    
     const project_owner = await UserModel.findById(project.owner);
     if (!project_owner) {
       return res.status(400).send({ error: "Can't find the user!" });
     }
 
     if (project_owner.username === logged_in_user.username) {
-      project.title = new_title
-      project.description = new_description
+      project.title = new_title;
+      project.description = new_description;
 
       await project.save();
 
@@ -246,7 +244,6 @@ router.put("/update", auth, async (req, res) => {
     } else {
       return res.status(400).send({ error: "Project not owned by the user!!" });
     }
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -262,17 +259,21 @@ router.put("/update", auth, async (req, res) => {
 router.post("/add-members", auth, async (req, res) => {
   try {
     const { project_id, usernames } = req.body;
-    
+
     // Check for empty fields
     if (!project_id || !Array.isArray(usernames) || usernames.length === 0) {
-      return res.status(400).json({ error: "Project ID and usernames are required." });
+      return res
+        .status(400)
+        .json({ error: "Project ID and usernames are required." });
     }
 
     const project = await ProjectsModel.findById(project_id);
     if (!project) return res.status(404).json({ error: "Project not found." });
 
     if (String(project.owner) !== req.user_id) {
-      return res.status(403).json({ error: "Only the project owner can add members." });
+      return res
+        .status(403)
+        .json({ error: "Only the project owner can add members." });
     }
 
     const users = await UserModel.find({ username: { $in: usernames } });
@@ -302,14 +303,18 @@ router.post("/remove-members", auth, async (req, res) => {
     const { project_id, usernames } = req.body;
 
     if (!project_id || !Array.isArray(usernames) || usernames.length === 0) {
-      return res.status(400).json({ error: "Project ID and usernames are required." });
+      return res
+        .status(400)
+        .json({ error: "Project ID and usernames are required." });
     }
 
     const project = await ProjectsModel.findById(project_id);
     if (!project) return res.status(404).json({ error: "Project not found." });
 
     if (String(project.owner) !== req.user_id) {
-      return res.status(403).json({ error: "Only the project owner can remove members." });
+      return res
+        .status(403)
+        .json({ error: "Only the project owner can remove members." });
     }
 
     const users = await UserModel.find({ username: { $in: usernames } });

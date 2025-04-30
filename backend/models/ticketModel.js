@@ -1,3 +1,4 @@
+const { Schema } = require("mongoose");
 let mongoose = require("mongoose");
 
 // Ref(relationships): https://dev.to/oluseyeo/how-to-create-relationships-with-mongoose-and-node-js-11c8
