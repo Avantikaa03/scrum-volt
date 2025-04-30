@@ -42,6 +42,9 @@ app.use("/user-auth", authRoutes);
 const projectRoutes = require('./routes/projectRoutes');
 app.use("/project", projectRoutes);
 
+const ticketRoutes = require('./routes/ticketRoutes');
+app.use("/ticket", ticketRoutes);
+
 
 
 // Home Routes
