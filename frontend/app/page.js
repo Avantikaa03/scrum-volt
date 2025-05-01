@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
+import SignUpForm from "@/components/ui/signup";
 
 
 export default function Home() {
   return (
     <>
-      <div>anushka</div>
-      <div>MY PROJECT</div>
-      <Button>GO</Button>
+      
+      
+      <SignUpForm/>
     </>
   );
 }
