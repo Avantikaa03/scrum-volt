@@ -4,6 +4,7 @@ const router = express.Router();
 const UserModel = require("../models/userModel");
 const auth = require("../middlewares/auth");
 const TicketModel = require("../models/ticketModel");
+const ProjectsModel = require("../models/projectModel");
 
 /* Note: Following routes are prefixed with `/ticket/` */
 
@@ -155,7 +156,6 @@ router.get("/info", auth, async (req, res) => {
       }
     }
 
-
     const output = {
       title: ticket.title,
       description: ticket.description,
@@ -166,6 +166,75 @@ router.get("/info", auth, async (req, res) => {
     };
 
     res.json(output);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/add-assignees", auth, async (req, res) => {
+  try {
+    const { ticket_id, usernames } = req.body;
+
+    // Check for empty fields
+    if (!ticket_id || !Array.isArray(usernames) || usernames.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Ticket ID and usernames are required." });
+    }
+
+    const ticket = await TicketModel.findById(ticket_id);
+    if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+
+    if (String(ticket.creator) !== req.user_id) {
+      return res
+        .status(403)
+        .json({ error: "Only the ticket creator can add assignees." });
+    }
+
+    const users = await UserModel.find({ username: { $in: usernames } });
+
+    const newAssigneeIds = users
+      .map((u) => u._id)
+      .filter((id) => !ticket.assignees.includes(id)); // avoid duplicates
+
+    ticket.assignees.push(...newAssigneeIds);
+    await ticket.save();
+
+    res.json({ message: "Assignees added successfully." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/remove-assignees", auth, async (req, res) => {
+  try {
+    const { ticket_id, usernames } = req.body;
+
+    if (!ticket_id || !Array.isArray(usernames) || usernames.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "Ticket ID and usernames are required." });
+    }
+
+    const ticket = await TicketModel.findById(ticket_id);
+    if (!ticket) return res.status(404).json({ error: "Ticket not found." });
+
+    if (String(ticket.creator) !== req.user_id) {
+      return res
+        .status(403)
+        .json({ error: "Only the ticket creator can remove assignees." });
+    }
+
+    const users = await UserModel.find({ username: { $in: usernames } });
+    const removeIds = users.map((u) => u._id.toString());
+
+    ticket.assignees = ticket.assignees.filter(
+      (memberId) => !removeIds.includes(memberId.toString())
+    );
+
+    await ticket.save();
+
+    res.json({ message: "Assignees removed successfully." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
