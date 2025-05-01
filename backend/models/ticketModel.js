@@ -7,6 +7,10 @@ let mongoose = require("mongoose");
 let ticket = mongoose.Schema({
   creation: { type: Date, default: Date.now },
   title: String,
+  creator: {
+    type: Schema.Types.ObjectId,
+    ref: "Users",
+  },
   assignees: [
     {
       type: Schema.Types.ObjectId,
@@ -14,12 +18,8 @@ let ticket = mongoose.Schema({
     },
   ],
   description: String,
-  creator: {
-    type: Schema.Types.ObjectId,
-    ref: "Users",
-  },
-  deadline: { type: Date },
   status: String,
+  deadline: Date,
 });
 
 const TicketModel = mongoose.model("Tickets", ticket);
