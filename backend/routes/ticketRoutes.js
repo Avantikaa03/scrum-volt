@@ -20,11 +20,17 @@ router.post("/create", auth, async (req, res) => {
       return res.status(400).send({ error: "Can't find the user!" });
     }
 
-    const { title, description, assignees, deadline } = req.body;
+    const { title, description, assignees, deadline, project_id } = req.body;
 
     // Check for empty fields
-    if (!title || !description) {
+    if (!title || !description || !deadline || !project_id) {
       return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+
+    // Check if project exists
+    const project = await ProjectsModel.findById(project_id);
+    if (!project) {
+      return res.status(404).json({ error: "Project not found." });
     }
 
     // Only run this block if 'assignees' is provided and is a non-empty array
@@ -48,6 +54,7 @@ router.post("/create", auth, async (req, res) => {
       creator: logged_in_user.id,
       status: "pending",
       deadline: new Date(deadline),
+      project: project._id,
     });
     await ticket.save();
 
@@ -239,5 +246,40 @@ router.post("/remove-assignees", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+router.get("/get-all-in-project", auth, async (req, res) => {
+  try {
+    const { project_id } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({ error: "Project ID is required." });
+    }
+
+    const tickets = await TicketModel.find({ project: project_id });
+
+    res.json({ tickets });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/get-all-tickets-owned-by-user", auth, async (req, res) => {
+  try {
+    const tickets = await TicketModel.find({ creator: req.user_id });
+    res.json({ tickets });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/get-all-tickets-assigned-to-user", auth, async (req, res) => {
+  try {
+    const tickets = await TicketModel.find({ assignees: req.user_id });
+    res.json({ tickets });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 module.exports = router;

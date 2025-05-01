@@ -20,6 +20,10 @@ let ticket = mongoose.Schema({
   description: String,
   status: String,
   deadline: Date,
+  project: {
+    type: Schema.Types.ObjectId,
+    ref: "Projects"
+  },
 });
 
 const TicketModel = mongoose.model("Tickets", ticket);
