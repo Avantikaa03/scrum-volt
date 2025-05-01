@@ -80,5 +80,44 @@ router.delete("/delete", auth, async (req, res) => {
   }
 });
 
+router.put("/update", auth, async (req, res) => {
+  try {
+    const logged_in_user = await UserModel.findById(req.user_id);
+    if (!logged_in_user) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    const { ticket_id, new_title, new_description, new_deadline, new_status } = req.body;
+    // Check for empty fields
+    if (!ticket_id || !new_title || !new_description || !new_deadline || !new_status) {
+      return res.status(400).json({ error: "Please enter all the fields -_-" });
+    }
+
+    const ticket = await TicketModel.findById(ticket_id);
+    if (!ticket) {
+      return res.status(400).send({ error: "Can't find the project!" });
+    }
+
+    const ticket_creator = await UserModel.findById(ticket.creator);
+    if (!ticket_creator) {
+      return res.status(400).send({ error: "Can't find the user!" });
+    }
+
+    if (ticket_creator.username === logged_in_user.username) {
+      ticket.title = new_title;
+      ticket.description = new_description;
+      ticket.deadline = new Date(new_deadline);
+      ticket.status = new_status;
+
+      await ticket.save();
+
+      res.json({ text: "Ticket updated successfully!" });
+    } else {
+      return res.status(400).send({ error: "Ticket not owned by the user!!" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
